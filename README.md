@@ -1,4 +1,4 @@
-# VeighNa框架的SQLite数据库接口
+# SQLite Database Interface for VeighNa Framework
 
 <p align="center">
   <img src ="https://vnpy.oss-cn-shanghai.aliyuncs.com/vnpy-logo.png"/>
@@ -10,15 +10,15 @@
     <img src ="https://img.shields.io/badge/python-3.7|3.8|3.9|3.10-blue.svg" />
 </p>
 
-## 说明
+## Description
 
-基于peewee开发的SQLite数据库接口，无需另外安装配置数据库软件，易于使用适合初学者用户。
+Based on peewee development of SQLite database interface, no need to install and configure database software, easy to use for beginners.
 
-## 使用
+## Use
 
-在VeighNa中使用SQLite时，需要在全局配置中填写以下字段信息：
+When you use SQLite in VeighNa, you need to fill in the following fields in the global configuration:
 
-|名称|含义|必填|举例|
+|Name|Meaning|Required |Examples|
 |---------|----|---|---|
-|database.name|名称|是|sqlite|
-|database.database|实例|是|database.db|
+|database.name|Name|Yes|sqlite|
+|database.database|Instance|Yes|database.db|

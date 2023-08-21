@@ -5,13 +5,14 @@ from peewee import (
     AutoField,
     CharField,
     DateTimeField,
-    FloatField, IntegerField,
+    FloatField,
+    IntegerField,
     Model,
     SqliteDatabase as PeeweeSqliteDatabase,
     ModelSelect,
     ModelDelete,
     chunked,
-    fn
+    fn,
 )
 
 from vnpy.trader.constant import Exchange, Interval
@@ -22,7 +23,7 @@ from vnpy.trader.database import (
     BarOverview,
     DB_TZ,
     TickOverview,
-    convert_tz
+    convert_tz,
 )
 
 
@@ -31,7 +32,7 @@ db: PeeweeSqliteDatabase = PeeweeSqliteDatabase(path)
 
 
 class DbBarData(Model):
-    """K线数据表映射对象"""
+    """K-Line Data Table Mapping Objects"""
 
     id: AutoField = AutoField()
 
@@ -54,7 +55,7 @@ class DbBarData(Model):
 
 
 class DbTickData(Model):
-    """TICK数据表映射对象"""
+    """TICK data table mapping object"""
 
     id: AutoField = AutoField()
 
@@ -108,7 +109,7 @@ class DbTickData(Model):
 
 
 class DbBarOverview(Model):
-    """K线汇总数据表映射对象"""
+    """K-Line Summary Datasheet Mapping Objects"""
 
     id: AutoField = AutoField()
 
@@ -125,7 +126,7 @@ class DbBarOverview(Model):
 
 
 class DbTickOverview(Model):
-    """Tick汇总数据表映射对象"""
+    """Tick Summary Data Table Mapping Object"""
 
     id: AutoField = AutoField()
 
@@ -141,7 +142,7 @@ class DbTickOverview(Model):
 
 
 class SqliteDatabase(BaseDatabase):
-    """SQLite数据库接口"""
+    """SQLite database interface"""
 
     def __init__(self) -> None:
         """"""
@@ -150,14 +151,14 @@ class SqliteDatabase(BaseDatabase):
         self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview])
 
     def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
-        """保存K线数据"""
-        # 读取主键参数
+        """Save K-line data"""
+        # Retrieve primary key parameters
         bar: BarData = bars[0]
         symbol: str = bar.symbol
         exchange: Exchange = bar.exchange
         interval: Interval = bar.interval
 
-        # 将BarData数据转换为字典，并调整时区
+        # Converting BarData data to a dictionary and adjusting the time zone
         data: list = []
 
         for bar in bars:
@@ -170,12 +171,12 @@ class SqliteDatabase(BaseDatabase):
             d.pop("vt_symbol")
             data.append(d)
 
-        # 使用upsert操作将数据更新到数据库中
+        # Updating data into the database using the upsert operation
         with self.db.atomic():
             for c in chunked(data, 50):
                 DbBarData.insert_many(c).on_conflict_replace().execute()
 
-        # 更新K线汇总数据
+        # Updated K-line summary data
         overview: DbBarOverview = DbBarOverview.get_or_none(
             DbBarOverview.symbol == symbol,
             DbBarOverview.exchange == exchange.value,
@@ -209,13 +210,13 @@ class SqliteDatabase(BaseDatabase):
         return True
 
     def save_tick_data(self, ticks: List[TickData], stream: bool = False) -> bool:
-        """保存TICK数据"""
-        # 读取主键参数
+        """Save TICK data"""
+        # Read the primary key parameters
         tick: TickData = ticks[0]
         symbol: str = tick.symbol
         exchange: Exchange = tick.exchange
 
-        # 将TickData数据转换为字典，并调整时区
+        # Converting TickData data to a dictionary and adjusting the time zone
         data: list = []
 
         for tick in ticks:
@@ -227,12 +228,12 @@ class SqliteDatabase(BaseDatabase):
             d.pop("vt_symbol")
             data.append(d)
 
-        # 使用upsert操作将数据更新到数据库中
+        # Updating data into the database using the upsert operation
         with self.db.atomic():
             for c in chunked(data, 10):
                 DbTickData.insert_many(c).on_conflict_replace().execute()
 
-        # 更新Tick汇总数据
+        # Update Tick summary data
         overview: DbTickOverview = DbTickOverview.get_or_none(
             DbTickOverview.symbol == symbol,
             DbTickOverview.exchange == exchange.value,
@@ -253,8 +254,7 @@ class SqliteDatabase(BaseDatabase):
             overview.end = max(ticks[-1].datetime, overview.end)
 
             s: ModelSelect = DbTickData.select().where(
-                (DbTickData.symbol == symbol)
-                & (DbTickData.exchange == exchange.value)
+                (DbTickData.symbol == symbol) & (DbTickData.exchange == exchange.value)
             )
             overview.count = s.count()
 
@@ -268,17 +268,19 @@ class SqliteDatabase(BaseDatabase):
         exchange: Exchange,
         interval: Interval,
         start: datetime,
-        end: datetime
+        end: datetime,
     ) -> List[BarData]:
-        """读取K线数据"""
+        """Read K-line data"""
         s: ModelSelect = (
-            DbBarData.select().where(
+            DbBarData.select()
+            .where(
                 (DbBarData.symbol == symbol)
                 & (DbBarData.exchange == exchange.value)
                 & (DbBarData.interval == interval.value)
                 & (DbBarData.datetime >= start)
                 & (DbBarData.datetime <= end)
-            ).order_by(DbBarData.datetime)
+            )
+            .order_by(DbBarData.datetime)
         )
 
         bars: List[BarData] = []
@@ -295,27 +297,25 @@ class SqliteDatabase(BaseDatabase):
                 high_price=db_bar.high_price,
                 low_price=db_bar.low_price,
                 close_price=db_bar.close_price,
-                gateway_name="DB"
+                gateway_name="DB",
             )
             bars.append(bar)
 
         return bars
 
     def load_tick_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        start: datetime,
-        end: datetime
+        self, symbol: str, exchange: Exchange, start: datetime, end: datetime
     ) -> List[TickData]:
-        """读取TICK数据"""
+        """Read TICK data"""
         s: ModelSelect = (
-            DbTickData.select().where(
+            DbTickData.select()
+            .where(
                 (DbTickData.symbol == symbol)
                 & (DbTickData.exchange == exchange.value)
                 & (DbTickData.datetime >= start)
                 & (DbTickData.datetime <= end)
-            ).order_by(DbTickData.datetime)
+            )
+            .order_by(DbTickData.datetime)
         )
 
         ticks: List[TickData] = []
@@ -357,19 +357,16 @@ class SqliteDatabase(BaseDatabase):
                 ask_volume_4=db_tick.ask_volume_4,
                 ask_volume_5=db_tick.ask_volume_5,
                 localtime=db_tick.localtime,
-                gateway_name="DB"
+                gateway_name="DB",
             )
             ticks.append(tick)
 
         return ticks
 
     def delete_bar_data(
-        self,
-        symbol: str,
-        exchange: Exchange,
-        interval: Interval
+        self, symbol: str, exchange: Exchange, interval: Interval
     ) -> int:
-        """删除K线数据"""
+        """Delete K-line data"""
         d: ModelDelete = DbBarData.delete().where(
             (DbBarData.symbol == symbol)
             & (DbBarData.exchange == exchange.value)
@@ -377,7 +374,7 @@ class SqliteDatabase(BaseDatabase):
         )
         count: int = d.execute()
 
-        # 删除K线汇总数据
+        # Delete K-line summary data
         d2: ModelDelete = DbBarOverview.delete().where(
             (DbBarOverview.symbol == symbol)
             & (DbBarOverview.exchange == exchange.value)
@@ -387,19 +384,14 @@ class SqliteDatabase(BaseDatabase):
 
         return count
 
-    def delete_tick_data(
-        self,
-        symbol: str,
-        exchange: Exchange
-    ) -> int:
-        """删除TICK数据"""
+    def delete_tick_data(self, symbol: str, exchange: Exchange) -> int:
+        """Delete TICK data"""
         d: ModelDelete = DbTickData.delete().where(
-            (DbTickData.symbol == symbol)
-            & (DbTickData.exchange == exchange.value)
+            (DbTickData.symbol == symbol) & (DbTickData.exchange == exchange.value)
         )
         count: int = d.execute()
 
-        # 删除Tick汇总数据
+        # Delete Tick Summary Data
         d2: ModelDelete = DbTickOverview.delete().where(
             (DbTickOverview.symbol == symbol)
             & (DbTickOverview.exchange == exchange.value)
@@ -409,8 +401,8 @@ class SqliteDatabase(BaseDatabase):
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
-        """查询数据库中的K线汇总信息"""
-        # 如果已有K线，但缺失汇总信息，则执行初始化
+        """Query the database for summarized K-line information"""
+        # If there are existing K-lines, but summary information is missing, perform an initialization
         data_count: int = DbBarData.select().count()
         overview_count: int = DbBarOverview.select().count()
         if data_count and not overview_count:
@@ -425,7 +417,7 @@ class SqliteDatabase(BaseDatabase):
         return overviews
 
     def get_tick_overview(self) -> List[TickOverview]:
-        """查询数据库中的Tick汇总信息"""
+        """Query the database for Tick summary information"""
         s: ModelSelect = DbTickOverview.select()
         overviews: list = []
         for overview in s:
@@ -434,19 +426,13 @@ class SqliteDatabase(BaseDatabase):
         return overviews
 
     def init_bar_overview(self) -> None:
-        """初始化数据库中的K线汇总信息"""
-        s: ModelSelect = (
-            DbBarData.select(
-                DbBarData.symbol,
-                DbBarData.exchange,
-                DbBarData.interval,
-                fn.COUNT(DbBarData.id).alias("count")
-            ).group_by(
-                DbBarData.symbol,
-                DbBarData.exchange,
-                DbBarData.interval
-            )
-        )
+        """Initialize the K-line summary information in the database"""
+        s: ModelSelect = DbBarData.select(
+            DbBarData.symbol,
+            DbBarData.exchange,
+            DbBarData.interval,
+            fn.COUNT(DbBarData.id).alias("count"),
+        ).group_by(DbBarData.symbol, DbBarData.exchange, DbBarData.interval)
 
         for data in s:
             overview: DbBarOverview = DbBarOverview()

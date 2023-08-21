@@ -1,4 +1,4 @@
-# 1.0.1版本
+# Version 1.0.1
 
-1. 增加Tick数据汇总信息支持
-2. 增加写入数据时的流式参数stream支持
+1. Add support for Tick data summary information
+2. Add support for stream parameter stream when writing data.
