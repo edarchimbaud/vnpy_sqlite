@@ -32,7 +32,7 @@ db: PeeweeSqliteDatabase = PeeweeSqliteDatabase(path)
 
 
 class DbBarData(Model):
-    """K-Line Data Table Mapping Objects"""
+    """Bar Data Table Mapping Objects"""
 
     id: AutoField = AutoField()
 
@@ -109,7 +109,7 @@ class DbTickData(Model):
 
 
 class DbBarOverview(Model):
-    """K-Line Summary Datasheet Mapping Objects"""
+    """Bar Summary Datasheet Mapping Objects"""
 
     id: AutoField = AutoField()
 
@@ -151,7 +151,7 @@ class SqliteDatabase(BaseDatabase):
         self.db.create_tables([DbBarData, DbTickData, DbBarOverview, DbTickOverview])
 
     def save_bar_data(self, bars: List[BarData], stream: bool = False) -> bool:
-        """Save K-line data"""
+        """Save bar data"""
         # Retrieve primary key parameters
         bar: BarData = bars[0]
         symbol: str = bar.symbol
@@ -176,7 +176,7 @@ class SqliteDatabase(BaseDatabase):
             for c in chunked(data, 50):
                 DbBarData.insert_many(c).on_conflict_replace().execute()
 
-        # Updated K-line summary data
+        # Updated bar summary data
         overview: DbBarOverview = DbBarOverview.get_or_none(
             DbBarOverview.symbol == symbol,
             DbBarOverview.exchange == exchange.value,
@@ -270,7 +270,7 @@ class SqliteDatabase(BaseDatabase):
         start: datetime,
         end: datetime,
     ) -> List[BarData]:
-        """Read K-line data"""
+        """Read bar data"""
         s: ModelSelect = (
             DbBarData.select()
             .where(
@@ -366,7 +366,7 @@ class SqliteDatabase(BaseDatabase):
     def delete_bar_data(
         self, symbol: str, exchange: Exchange, interval: Interval
     ) -> int:
-        """Delete K-line data"""
+        """Delete bar data"""
         d: ModelDelete = DbBarData.delete().where(
             (DbBarData.symbol == symbol)
             & (DbBarData.exchange == exchange.value)
@@ -374,7 +374,7 @@ class SqliteDatabase(BaseDatabase):
         )
         count: int = d.execute()
 
-        # Delete K-line summary data
+        # Delete bar summary data
         d2: ModelDelete = DbBarOverview.delete().where(
             (DbBarOverview.symbol == symbol)
             & (DbBarOverview.exchange == exchange.value)
@@ -401,8 +401,8 @@ class SqliteDatabase(BaseDatabase):
         return count
 
     def get_bar_overview(self) -> List[BarOverview]:
-        """Query the database for summarized K-line information"""
-        # If there are existing K-lines, but summary information is missing, perform an initialization
+        """Query the database for summarized bar information"""
+        # If there are existing bars, but summary information is missing, perform an initialization
         data_count: int = DbBarData.select().count()
         overview_count: int = DbBarOverview.select().count()
         if data_count and not overview_count:
@@ -426,7 +426,7 @@ class SqliteDatabase(BaseDatabase):
         return overviews
 
     def init_bar_overview(self) -> None:
-        """Initialize the K-line summary information in the database"""
+        """Initialize the bar summary information in the database"""
         s: ModelSelect = DbBarData.select(
             DbBarData.symbol,
             DbBarData.exchange,
